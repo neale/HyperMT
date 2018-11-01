@@ -39,6 +39,7 @@ def load_args():
 def train_clf(args, Z, data, target):
     """ calc classifier loss on target architecture """
     data, target = data.cuda(), target.cuda()
+    print (Z[0].shape)
     out = F.conv2d(data, Z[0], stride=1)
     out = F.leaky_relu(out)
     out = F.max_pool2d(out, 2, 2)

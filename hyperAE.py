@@ -4,14 +4,14 @@ import pprint
 import argparse
 import numpy as np
 
-from torch import optim
 from torch.nn import functional as F
 
 import ops
 import utils
 import netdef
 import datagen
-
+from ae import Encoder as sampleE
+from ae import Decoder as sampleD
 
 def load_args():
 
@@ -38,7 +38,7 @@ def load_args():
 # hard code the two layer net
 def train_clf(args, Z, data, target):
     """ Encoder """
-    data, target = data.cuda(), target.cuda()
+    data = data.cuda()
     out = F.conv2d(data, Z[0], stride=2, padding=2)
     out = F.dropout(out, p=0.3)
     out = F.relu(out)
@@ -56,12 +56,13 @@ def train_clf(args, Z, data, target):
     out = out.view(-1, 4*16, 4, 4)
     out = F.conv_transpose2d(out, Z[5])
     out = F.relu(out)
+    out = out[:, :, :7, :7]
     out = F.conv_transpose2d(out, Z[6])
     out = F.relu(out)
     d_out = F.conv_transpose2d(out, Z[7], stride=2)
     
-    out = F.sigmoid(d_out) 
-    loss = F.mse_loss(out, target)
+    out = torch.sigmoid(d_out) 
+    loss = F.mse_loss(out, data)
     return loss, out
 
 
@@ -76,18 +77,18 @@ def z_loss(args, real, fake):
 
 
 def train(args):
-    
+    from torch import optim
     torch.manual_seed(8734)
     netE = models.Encoderz(args).cuda()
     netD = models.DiscriminatorZ(args).cuda()
-    E1 = models.GeneratorW1(args).cuda()
-    E2 = models.GeneratorW2(args).cuda()
-    E3 = models.GeneratorW3(args).cuda()
-    E4 = models.GeneratorW3(args).cuda()
-    D1 = models.GeneratorW3(args).cuda()
-    D2 = models.GeneratorW3(args).cuda()
-    D3 = models.GeneratorW3(args).cuda()
-    D4 = models.GeneratorW3(args).cuda()
+    E1 = models.GeneratorE1(args).cuda()
+    E2 = models.GeneratorE2(args).cuda()
+    E3 = models.GeneratorE3(args).cuda()
+    E4 = models.GeneratorE4(args).cuda()
+    D1 = models.GeneratorD1(args).cuda()
+    D2 = models.GeneratorD2(args).cuda()
+    D3 = models.GeneratorD3(args).cuda()
+    D4 = models.GeneratorD4(args).cuda()
     print (netE, netD)
     print (E1, E2, E3, E4, D1, D2, D3, D4)
 
@@ -164,13 +165,13 @@ def train(args):
             netD.zero_grad()
             z = utils.sample_d(x_dist, args.batch_size)
             codes = netE(z)
-            Ecodes, Dcodes = [], []
+            Eweights, Dweights = [], []
             i = 0
             for net in Enets:
-                Ecodes.append(net(codes[i]))
+                Eweights.append(net(codes[i]))
                 i += 1
             for net in Dnets:
-                Dcodes.append(net(codes[i]))
+                Dweights.append(net(codes[i]))
                 i += 1
             d_real = []
             for code in codes:
@@ -180,7 +181,7 @@ def train(args):
             netD.zero_grad()
             d_loss = torch.stack(d_real).log().mean() * 10.
 
-            for layers in zip(Ecodes+D_codes):
+            for layers in zip(*(Eweights+Dweights)):
                 loss, _ = train_clf(args, layers, data, target)
                 scaled_loss = args.beta * loss
                 scaled_loss.backward(retain_graph=True)
@@ -193,7 +194,6 @@ def train(args):
             loss = loss.item()
                 
             if batch_idx % 50 == 0:
-                acc = (correct / 1) 
                 print ('**************************************')
                 print ('AE MNIST Test, beta: {}'.format(args.beta))
                 print ('MSE Loss: {}'.format(loss))
@@ -201,19 +201,21 @@ def train(args):
                 print ('best test loss: {}'.format(args.best_loss))
                 print ('**************************************')
             
-            if batch_idx > 1 and batch_idx % 199 == 0:
+            if batch_idx > 1 and batch_idx % 49 == 0:
                 test_acc = 0.
                 test_loss = 0.
                 for i, (data, y) in enumerate(mnist_test):
                     z = utils.sample_d(x_dist, args.batch_size)
                     codes = netE(z)
+                    Eweights, Dweights = [], []
+                    i = 0
                     for net in Enets:
-                        Ecodes.append(net(codes[i]))
+                        Eweights.append(net(codes[i]))
                         i += 1
                     for net in Dnets:
-                        Dcodes.append(net(codes[i]))
+                        Dweights.append(net(codes[i]))
                         i += 1
-                    for layers in zip(Ecodes+Dcodes):
+                    for layers in zip(*(Eweights+Dweights)):
                         loss, out = train_clf(args, layers, data, y)
                         test_loss += loss.item()
                 test_loss /= len(mnist_test.dataset) * args.batch_size
@@ -221,27 +223,28 @@ def train(args):
                 if test_loss < best_test_loss:
                     print ('==> new best stats, saving')
                     #utils.save_clf(args, z_test, test_acc)
-                    utils.save_hypernet_mnist(args, [netE] + Enets + Dnets, test_acc)
                     if test_loss < best_test_loss:
                         best_test_loss = test_loss
                         args.best_loss = test_loss
+                archE = sampleE(args).cuda()
+                archD = sampleD(args).cuda()
+                eweight = list(zip(*Eweights))[0]
+                dweight = list(zip(*Dweights))[0]
+                modelE = utils.weights_to_clf(eweight, archE, args.statE['layer_names'])
+                modelD = utils.weights_to_clf(dweight, archD, args.statD['layer_names'])
+                utils.generate_image(args, batch_idx, modelE, modelD, data.cuda())
 
 
 if __name__ == '__main__':
-
     args = load_args()
-    if args.model == 'small':
-        import models.models_mnist_small as models
-    elif args.model == 'nobn':
-        import models.models_mnist_nobn as models
-    elif args.model == 'full':
-        import models.models_mnist as models
-    else:
-        raise NotImplementedError
-
-    modeldef = netdef.nets()[args.target]
-    pprint.pprint (modeldef)
+    import models.models_ae as models
+    modeldef1 = netdef.nets()['aeE']
+    modeldef2 = netdef.nets()['aeD']
+    pprint.pprint(modeldef1)
+    pprint.pprint(modeldef2)
     # log some of the netstat quantities so we don't subscript everywhere
-    args.stat = modeldef
-    args.shapes = modeldef['shapes']
+    args.statE = modeldef1
+    args.statD = modeldef2
+    args.shapesE = modeldef1['shapes']
+    args.shapesD = modeldef2['shapes']
     train(args)

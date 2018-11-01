@@ -10,10 +10,33 @@ from sklearn.model_selection import train_test_split
 from glob import glob
 
 
+def load_mnist(args):
+    torch.cuda.manual_seed(1)
+    kwargs = {'num_workers': 1, 'pin_memory': True, 'drop_last': True}
+    path = 'data_m/'
+    if args.scratch:
+        path = '/scratch/eecs-share/ratzlafn/' + path
+    train_loader = torch.utils.data.DataLoader(
+            datasets.MNIST(path, train=True, download=True,
+                transform=transforms.Compose([
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.1307,), (0.3081,))
+                    ])),
+                batch_size=32, shuffle=True, **kwargs)
+                #batch_size=32, **kwargs)
+    test_loader = torch.utils.data.DataLoader(
+            datasets.MNIST(path, train=False, transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,))
+                ])),
+            batch_size=32, shuffle=True, **kwargs)
+    return train_loader, test_loader
+
+
 def f(x):
     return x.expand(3, 32, 32)
 
-def load_mnist(args):
+def load_mnist_multi(args):
     torch.cuda.manual_seed(1)
     kwargs = {'num_workers': 1, 'pin_memory': True, 'drop_last': True}
     path = 'data_m/'

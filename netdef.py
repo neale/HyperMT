@@ -42,4 +42,21 @@ def nets():
             'shapes': [(16, 3, 3, 3), (32, 16, 3, 3), (32, 32, 3, 3), (64, 128), (10, 64)],
             'base_shape': 3
             }
+    networks['aeE'] = { 
+            'name': 'Encoder',
+            'n_layers': 4, 
+            'layer_names': ['conv1', 'conv2', 'conv3', 'linear1'],
+            'shapes': [(16, 1, 5, 5), (32, 16, 5, 5), (64, 32, 5, 5), (16, 1024)],
+            'base_shape': 5
+            }
+    networks['aeD'] = { 
+            'name': 'Decoder',
+            'n_layers': 4, 
+            'layer_names': ['linear1', 'deconv1', 'deconv2', 'deconv_out'],
+            'shapes': [(1024, 16), (64, 32, 5, 5), (32, 16, 5, 5), (16, 1, 5, 5)],
+            'base_shape': 5
+            }
+
+
+
     return networks

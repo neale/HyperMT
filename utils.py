@@ -41,28 +41,28 @@ def sample_z_like(shape, scale=1., grad=True):
     return torch.randn(*shape, requires_grad=grad).cuda()
 
 
-def save_model(args, model, optim):
+def save_model(args, model, op):
     path = '{}/{}/{}_{}.pt'.format(
             args.dataset, args.model, model.name, args.exp)
     path = model_dir + path
     torch.save({
         'state_dict': model.state_dict(),
-        'optimizer': optim.state_dict(),
+        'optimizer': op.state_dict(),
         'best_acc': args.best_acc,
         'best_loss': args.best_loss
         }, path)
 
 
-def load_model(args, model, optim):
+def load_model(args, model, op):
     path = '{}/{}/{}_{}.pt'.format(
             args.dataset, args.model, model.name, args.exp)
     path = model_dir + path
     ckpt = torch.load(path)
     model.load_state_dict(ckpt['state_dict'])
-    optim.load_state_dict(ckpt['optimizer'])
+    op.load_state_dict(ckpt['optimizer'])
     acc = ckpt['best_acc']
     loss = ckpt['best_loss']
-    return model, optim, (acc, loss)
+    return model, op, (acc, loss)
 
 
 def get_net_only(model):
@@ -230,14 +230,17 @@ def weights_to_clf(weights, model, names):
     return model
 
 
-def generate_image(args, iter, model, save_path):
+def generate_image(args, iter, E, D, imgs, save_path=None):
+    if save_path is None:
+        if args.scratch:
+            save_path = '/scratch/eecs-share/ratzlafn/imgs'
+        else:
+            save_path = './'
     batch_size = args.batch_size
     datashape = (1, 28, 28)
-    fixed_noise = torch.randn(batch_size, args.dim, requires_grad=True).cuda()
-    samples = model(fixed_noise)
-    samples = samples.view(batch_size, 28, 28)
-    samples = samples.cpu().numpy()
-    save_images(samples, save_path+'/samples_{}.jpg'.format(iter))
+    samples = D(E(imgs))
+    samples = samples.view(batch_size, 28, 28).detach().cpu().numpy()
+    save_images(samples, save_path+'samples_{}.jpg'.format(iter))
 
 
 def save_images(X, save_path, use_np=False):

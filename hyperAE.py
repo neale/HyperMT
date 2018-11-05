@@ -18,6 +18,8 @@ def load_args():
     parser = argparse.ArgumentParser(description='param-wgan')
     parser.add_argument('--z', default=128, type=int, help='latent space width')
     parser.add_argument('--ze', default=256, type=int, help='encoder dimension')
+    parser.add_argument('--ddim', default=64, type=int, help='encoder dimension')
+    parser.add_argument('--edim', default=64, type=int, help='encoder dimension')
     parser.add_argument('--batch_size', default=32, type=int)
     parser.add_argument('--epochs', default=200000, type=int)
     parser.add_argument('--target', default='small2', type=str)
@@ -39,29 +41,31 @@ def load_args():
 def train_clf(args, Z, data, target):
     """ Encoder """
     data = data.cuda()
-    out = F.conv2d(data, Z[0], stride=2, padding=2)
-    out = F.dropout(out, p=0.3)
+    out = F.conv2d(data, Z[0], stride=3, padding=1)
+    #out = F.dropout(out, p=0.3)
     out = F.relu(out)
-    out = F.conv2d(out, Z[1], stride=2, padding=2)
-    out = F.dropout(out, p=0.3)
+    out = F.max_pool2d(out, 2, 2)
+    out = F.conv2d(out, Z[1], stride=2, padding=1)
+    #out = F.dropout(out, p=0.3)
     out = F.relu(out)
-    out = F.conv2d(out, Z[2], stride=2, padding=2)
-    out = F.dropout(out, p=0.3)
-    out = F.relu(out)
-    out = out.view(-1, 4*4*4*16)
-    out = F.linear(out, Z[3])
-    e_out = out.view(-1, 16)
+    out = F.max_pool2d(out, 2, 1)
+    #out = F.conv2d(out, Z[2], stride=2, padding=2)
+    #out = F.dropout(out, p=0.3)
+    #out = F.relu(out)
+    #out = out.view(-1, 4*4*4*args.edim)
+    #out = F.linear(out, Z[3])
+    #e_out = out.view(-1, args.edim)
     """ Decoder """
-    out = F.linear(e_out, Z[4])
-    out = out.view(-1, 4*16, 4, 4)
-    out = F.conv_transpose2d(out, Z[5])
+    #out = F.linear(e_out, Z[4])
+    #out = out.view(-1, 4*args.edim, 4, 4)
+    out = F.conv_transpose2d(out, Z[2], stride=2)
     out = F.relu(out)
-    out = out[:, :, :7, :7]
-    out = F.conv_transpose2d(out, Z[6])
+    #out = out[:, :, :7, :7]
+    out = F.conv_transpose2d(out, Z[3], stride=3, padding=1)
     out = F.relu(out)
-    d_out = F.conv_transpose2d(out, Z[7], stride=2)
+    d_out = F.conv_transpose2d(out, Z[4], stride=2, padding=1)
     
-    out = torch.sigmoid(d_out) 
+    out = torch.sigmoid(d_out)
     loss = F.mse_loss(out, data)
     return loss, out
 
@@ -78,19 +82,19 @@ def z_loss(args, real, fake):
 
 def train(args):
     from torch import optim
-    torch.manual_seed(8734)
+    #torch.manual_seed(8734)
     netE = models.Encoderz(args).cuda()
     netD = models.DiscriminatorZ(args).cuda()
     E1 = models.GeneratorE1(args).cuda()
     E2 = models.GeneratorE2(args).cuda()
-    E3 = models.GeneratorE3(args).cuda()
-    E4 = models.GeneratorE4(args).cuda()
-    D1 = models.GeneratorD1(args).cuda()
-    D2 = models.GeneratorD2(args).cuda()
-    D3 = models.GeneratorD3(args).cuda()
-    D4 = models.GeneratorD4(args).cuda()
+    #E3 = models.GeneratorE3(args).cuda()
+    #E4 = models.GeneratorE4(args).cuda()
+    #D1 = models.GeneratorD1(args).cuda()
+    D1 = models.GeneratorD2(args).cuda()
+    D2 = models.GeneratorD3(args).cuda()
+    D3 = models.GeneratorD4(args).cuda()
     print (netE, netD)
-    print (E1, E2, E3, E4, D1, D2, D3, D4)
+    print (E1, E2, D1, D2, D3)
 
     optimE = optim.Adam(netE.parameters(), lr=5e-4, betas=(0.5, 0.9), weight_decay=1e-4)
     optimD = optim.Adam(netD.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4)
@@ -98,18 +102,18 @@ def train(args):
     Eoptim = [
         optim.Adam(E1.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
         optim.Adam(E2.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
-        optim.Adam(E3.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
-        optim.Adam(E4.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4)
+        #optim.Adam(E3.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
+        #optim.Adam(E4.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4)
     ]
     Doptim = [
+        #optim.Adam(D1.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
         optim.Adam(D1.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
         optim.Adam(D2.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
-        optim.Adam(D3.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4),
-        optim.Adam(D4.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4)
+        optim.Adam(D3.parameters(), lr=1e-4, betas=(0.5, 0.9), weight_decay=1e-4)
     ]
 
-    Enets = [E1, E2, E3, E4]
-    Dnets = [D1, D2, D3, D4]
+    Enets = [E1, E2]
+    Dnets = [D1, D2, D3]
 
     best_test_loss = np.inf
     args.best_loss = best_test_loss
@@ -201,7 +205,7 @@ def train(args):
                 print ('best test loss: {}'.format(args.best_loss))
                 print ('**************************************')
             
-            if batch_idx > 1 and batch_idx % 49 == 0:
+            if batch_idx > 1 and batch_idx % 199 == 0:
                 test_acc = 0.
                 test_loss = 0.
                 for i, (data, y) in enumerate(mnist_test):
@@ -218,7 +222,9 @@ def train(args):
                     for layers in zip(*(Eweights+Dweights)):
                         loss, out = train_clf(args, layers, data, y)
                         test_loss += loss.item()
-                test_loss /= len(mnist_test.dataset) * args.batch_size
+                    if i == 10:
+                        break
+                test_loss /= 10*len(y) * args.batch_size
                 print ('Test Loss: {}'.format(test_loss))
                 if test_loss < best_test_loss:
                     print ('==> new best stats, saving')
@@ -228,8 +234,9 @@ def train(args):
                         args.best_loss = test_loss
                 archE = sampleE(args).cuda()
                 archD = sampleD(args).cuda()
-                eweight = list(zip(*Eweights))[0]
-                dweight = list(zip(*Dweights))[0]
+                rand = np.random.randint(args.batch_size)
+                eweight = list(zip(*Eweights))[rand]
+                dweight = list(zip(*Dweights))[rand]
                 modelE = utils.weights_to_clf(eweight, archE, args.statE['layer_names'])
                 modelD = utils.weights_to_clf(dweight, archD, args.statD['layer_names'])
                 utils.generate_image(args, batch_idx, modelE, modelD, data.cuda())

@@ -45,16 +45,16 @@ def nets():
     networks['aeE'] = { 
             'name': 'Encoder',
             'n_layers': 4, 
-            'layer_names': ['conv1', 'conv2', 'conv3', 'linear1'],
-            'shapes': [(16, 1, 5, 5), (32, 16, 5, 5), (64, 32, 5, 5), (16, 1024)],
-            'base_shape': 5
+            'layer_names': ['conv1', 'conv2'],
+            'shapes': [(20, 1, 3, 3), (40, 20, 3, 3)],
+            'base_shape': 3
             }
     networks['aeD'] = { 
             'name': 'Decoder',
             'n_layers': 4, 
-            'layer_names': ['linear1', 'deconv1', 'deconv2', 'deconv_out'],
-            'shapes': [(1024, 16), (64, 32, 5, 5), (32, 16, 5, 5), (16, 1, 5, 5)],
-            'base_shape': 5
+            'layer_names': ['deconv1', 'deconv2', 'deconv_out'],
+            'shapes': [(80, 60, 3, 3), (40, 20, 5, 5), (20, 1, 2, 2)],
+            'base_shape': 3
             }
 
 

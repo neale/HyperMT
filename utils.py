@@ -235,10 +235,11 @@ def generate_image(args, iter, E, D, imgs, save_path=None):
         if args.scratch:
             save_path = '/scratch/eecs-share/ratzlafn/imgs'
         else:
-            save_path = './'
+            save_path = './plots/'
     batch_size = args.batch_size
     datashape = (1, 28, 28)
-    samples = D(E(imgs))
+    samples = E(imgs)
+    samples = D(samples)
     samples = samples.view(batch_size, 28, 28).detach().cpu().numpy()
     save_images(samples, save_path+'samples_{}.jpg'.format(iter))
 

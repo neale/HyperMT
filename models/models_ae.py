@@ -45,8 +45,9 @@ class GeneratorE1(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorE1'
+        dim = self.edim
         self.linear1 = nn.Linear(self.z, 512)
-        self.linear2 = nn.Linear(512, 1*16*5*5)
+        self.linear2 = nn.Linear(512, 1*(dim*2)*3*3)
         self.bn1 = nn.BatchNorm1d(512)
         self.relu = nn.ELU(inplace=True)
 
@@ -54,7 +55,7 @@ class GeneratorE1(nn.Module):
         #print ('W2 in: ', x.shape)
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.linear2(x)
-        x = x.view(-1, 16, 1, 5, 5)
+        x = x.view(-1, self.edim*2, 1, 3, 3)
         #print ('W2 out: ', x.shape)
         return x
 
@@ -65,9 +66,10 @@ class GeneratorE2(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorE2'
+        dim = self.edim
         self.linear1 = nn.Linear(self.z, 512)
         self.linear2 = nn.Linear(512, 1024)
-        self.linear3 = nn.Linear(1024, 16*32*5*5)
+        self.linear3 = nn.Linear(1024, dim*(2*dim)*3*3)
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(1024)
         self.relu = nn.ELU(inplace=True)
@@ -77,7 +79,7 @@ class GeneratorE2(nn.Module):
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.relu(self.bn2(self.linear2(x)))
         x = self.linear3(x)
-        x = x.view(-1, 32, 16, 5, 5)
+        x = x.view(-1, self.edim, self.edim*2, 3, 3)
         #print ('W2 out: ', x.shape)
         return x
 
@@ -88,9 +90,10 @@ class GeneratorE3(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorE3'
+        dim = self.edim
         self.linear1 = nn.Linear(self.z, 512)
         self.linear2 = nn.Linear(512, 1024)
-        self.linear3 = nn.Linear(1024, 32*64*5*5)
+        self.linear3 = nn.Linear(1024, (dim*2)*(dim*4)*5*5)
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(1024)
         self.relu = nn.ELU(inplace=True)
@@ -100,7 +103,7 @@ class GeneratorE3(nn.Module):
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.relu(self.bn2(self.linear2(x)))
         x = self.linear3(x)
-        x = x.view(-1, 64, 32, 5, 5)
+        x = x.view(-1, self.edim*4, self.edim*2, 5, 5)
         #print ('W2 out: ', x.shape)
         return x
 
@@ -111,8 +114,9 @@ class GeneratorE4(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorE4'
+        dim = self.edim
         self.linear1 = nn.Linear(self.z, 512)
-        self.linear2 = nn.Linear(512, 16 * 1024)
+        self.linear2 = nn.Linear(512, dim * (4*4*4*dim))
         self.bn1 = nn.BatchNorm1d(512)
         self.relu = nn.ELU(inplace=True)
 
@@ -120,7 +124,7 @@ class GeneratorE4(nn.Module):
         #print ('W2 in: ', x.shape)
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.linear2(x)
-        x = x.view(-1, 16, 1024)
+        x = x.view(-1, self.edim, 4*4*4*self.edim)
         #print ('W2 out: ', x.shape)
         return x
 
@@ -132,8 +136,9 @@ class GeneratorD1(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorD1'
+        dim = self.ddim
         self.linear1 = nn.Linear(self.z, 512)
-        self.linear2 = nn.Linear(512, 1024 * 16)
+        self.linear2 = nn.Linear(512, dim * (4*4*4*dim))
         self.bn1 = nn.BatchNorm1d(512)
         self.relu = nn.ELU(inplace=True)
 
@@ -141,7 +146,7 @@ class GeneratorD1(nn.Module):
         #print ('W2 in: ', x.shape)
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.linear2(x)
-        x = x.view(-1, 1024, 16)
+        x = x.view(-1, 4*4*4*self.ddim, self.ddim)
         #print ('W2 out: ', x.shape)
         return x
 
@@ -153,9 +158,10 @@ class GeneratorD2(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorD2'
+        dim = self.ddim
         self.linear1 = nn.Linear(self.z, 512)
         self.linear2 = nn.Linear(512, 1024)
-        self.linear3 = nn.Linear(1024, 32*64*5*5)
+        self.linear3 = nn.Linear(1024, dim*(dim*2)*3*3)
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(1024)
         self.relu = nn.ELU(inplace=True)
@@ -165,7 +171,7 @@ class GeneratorD2(nn.Module):
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.relu(self.bn2(self.linear2(x)))
         x = self.linear3(x)
-        x = x.view(-1, 64, 32, 5, 5)
+        x = x.view(-1, self.ddim, self.ddim*2, 3, 3)
         #print ('W2 out: ', x.shape)
         return x
 
@@ -176,9 +182,10 @@ class GeneratorD3(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorD3'
+        dim = self.ddim
         self.linear1 = nn.Linear(self.z, 512)
         self.linear2 = nn.Linear(512, 1024)
-        self.linear3 = nn.Linear(1024, 16*32*5*5)
+        self.linear3 = nn.Linear(1024, dim*(dim*2)*5*5)
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(1024)
         self.relu = nn.ELU(inplace=True)
@@ -188,7 +195,7 @@ class GeneratorD3(nn.Module):
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.relu(self.bn2(self.linear2(x)))
         x = self.linear3(x)
-        x = x.view(-1, 32, 16, 5, 5)
+        x = x.view(-1, self.ddim*2, self.ddim, 5, 5)
         #print ('W2 out: ', x.shape)
         return x
 
@@ -199,8 +206,9 @@ class GeneratorD4(nn.Module):
         for k, v in vars(args).items():
             setattr(self, k, v)
         self.name = 'GeneratorD4'
+        dim = self.ddim
         self.linear1 = nn.Linear(self.z, 512)
-        self.linear2 = nn.Linear(512, 16*1*8*8)
+        self.linear2 = nn.Linear(512, dim*1*2*2)
         self.bn1 = nn.BatchNorm1d(512)
         self.relu = nn.ELU(inplace=True)
 
@@ -208,7 +216,7 @@ class GeneratorD4(nn.Module):
         #print ('W2 in: ', x.shape)
         x = self.relu(self.bn1(self.linear1(x)))
         x = self.linear2(x)
-        x = x.view(-1, 16, 1, 8, 8)
+        x = x.view(-1, self.ddim, 1, 2, 2)
         #print ('W2 out: ', x.shape)
         return x
 

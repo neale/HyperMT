@@ -20,14 +20,14 @@ def load_mnist(args):
             datasets.MNIST(path, train=True, download=True,
                 transform=transforms.Compose([
                     transforms.ToTensor(),
-                    transforms.Normalize((0.1307,), (0.3081,))
+                    transforms.Normalize((0.5,), (0.5,))
                     ])),
                 batch_size=32, shuffle=True, **kwargs)
                 #batch_size=32, **kwargs)
     test_loader = torch.utils.data.DataLoader(
             datasets.MNIST(path, train=False, transform=transforms.Compose([
                 transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
+                transforms.Normalize((0.5,), (0.5,))
                 ])),
             batch_size=32, shuffle=True, **kwargs)
     return train_loader, test_loader
